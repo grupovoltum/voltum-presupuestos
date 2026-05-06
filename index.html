@@ -685,27 +685,23 @@ function exportarPDF() {
   }
 
   // DESGLOSE DE PAGOS en PDF
-  const incluyeColPDF = document.getElementById('incluye-colocacion').checked;
-  if(totalGeneral > 0) {
-    y += 6;
-    const desgloseFilas = incluyeColPDF
-      ? [{label:'Canalizaciones',pct:50},{label:'Cableado',pct:30},{label:'Colocacion de artefactos',pct:20}]
-      : [{label:'Canalizaciones',pct:50},{label:'Cableado',pct:50}];
-    doc.autoTable({
-      startY: y,
-      margin: { left: M, right: M },
-      head: [['DESGLOSE DE PAGOS', '%', 'MONTO']],
-      body: desgloseFilas.map(f => [f.label, f.pct+'%', fmt(f.pct/100*totalGeneral)]),
-      headStyles: { fillColor: [0,212,140], textColor:[10,10,10], fontSize:8, fontStyle:'bold' },
-      bodyStyles: { fontSize:9, textColor: negro },
-      columnStyles: { 0:{cellWidth:'auto'}, 1:{halign:'center',cellWidth:20}, 2:{halign:'right',cellWidth:45} },
-      alternateRowStyles: { fillColor: gris },
-      footStyles: { fillColor: gris },
-    });
-    y = doc.lastAutoTable.finalY + 6;
-  }
+  var incluyeColPDF = document.getElementById("incluye-colocacion").checked;
+  var desgloseFilas = incluyeColPDF
+    ? [["Canalizaciones", "50%", fmt(totalGeneral*0.50)],["Cableado", "30%", fmt(totalGeneral*0.30)],["Colocacion de artefactos", "20%", fmt(totalGeneral*0.20)]]
+    : [["Canalizaciones", "50%", fmt(totalGeneral*0.50)],["Cableado", "50%", fmt(totalGeneral*0.50)]];
+  doc.autoTable({
+    startY: y + 6,
+    margin: { left: M, right: M },
+    head: [["DESGLOSE DE PAGOS", "%", "MONTO"]],
+    body: desgloseFilas,
+    headStyles: { fillColor: [0,212,140], textColor:[10,10,10], fontSize:8, fontStyle:"bold" },
+    bodyStyles: { fontSize:9, textColor: negro },
+    columnStyles: { 0:{cellWidth:"auto"}, 1:{halign:"center",cellWidth:20}, 2:{halign:"right",cellWidth:45} },
+    alternateRowStyles: { fillColor: gris },
+  });
+  y = doc.lastAutoTable.finalY + 6;
 
-  y=Math.max(y+20,230);
+  y = Math.max(y + 20, 240);
   doc.setDrawColor(180,180,180); doc.line(W-M-50,y,W-M,y);
   doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(150,150,150);
   doc.text("Firma y sello VOLTUM",W-M-25,y+5,{align:"center"});
