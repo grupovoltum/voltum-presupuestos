@@ -224,6 +224,12 @@
   <!-- DATOS -->
   <div class="section">
     <div class="section-title">DATOS DE LA OBRA</div>
+    <div class="field" style="margin-bottom:12px">
+      <label>CLIENTE (elegir de Caja)</label>
+      <select id="cliente-sel" onchange="elegirClienteCaja()" style="width:100%;padding:11px;background:var(--panel);color:#fff;border:1px solid var(--borde);border-radius:8px;font-size:14px">
+        <option value="">— Cliente nuevo (escribir abajo) —</option>
+      </select>
+    </div>
     <div class="grid-2">
       <div class="field"><label>CLIENTE</label><input id="cliente" type="text" placeholder="Nombre del cliente"/></div>
       <div class="field"><label>DIRECCIÓN / OBRA</label><input id="obra" type="text" placeholder="Ej: Av. Colón 1200, Córdoba"/></div>
@@ -322,6 +328,7 @@
     <div class="btn-row">
       <button class="btn btn-verde" onclick="copiarWhatsapp()">📋 COPIAR WHATSAPP</button>
       <button class="btn btn-outline" id="btn-pdf" onclick="exportarPDF()">📄 EXPORTAR PDF</button>
+      <button class="btn btn-verde" id="btn-caja" onclick="guardarPresupuesto()">✓ GUARDAR PRESUPUESTO EN CAJA</button>
       <button class="btn btn-ghost" onclick="nuevoPresupuesto()">NUEVO PRESUPUESTO</button>
     </div>
   </div>
@@ -330,8 +337,45 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
 <script>
+// ── Conexión a la CAJA (Firebase de voltum-caja) ──────────────────────────────
+firebase.initializeApp({
+  apiKey: "AIzaSyATlvI40KY25fbxc77_AUFRKh66SmySXCc",
+  authDomain: "voltum-movimientos.firebaseapp.com",
+  projectId: "voltum-movimientos",
+  storageBucket: "voltum-movimientos.firebasestorage.app",
+  messagingSenderId: "460115198912",
+  appId: "1:460115198912:web:79d50767378b12fc6a3e25"
+});
+var cajaDB = firebase.firestore();
+function cajaUID(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function hoyISO(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+window._totalActual = 0;
+window._clientesCaja = [];
+
+// Traer la lista de clientes desde Caja y llenar el desplegable
+cajaDB.collection('clientes').onSnapshot(function(snap){
+  window._clientesCaja = snap.docs.map(function(d){return d.data();});
+  window._clientesCaja.sort(function(a,b){return (a.nombre||'').localeCompare(b.nombre||'');});
+  var sel = document.getElementById('cliente-sel');
+  if(!sel) return;
+  var actual = sel.value;
+  sel.innerHTML = '<option value="">— Cliente nuevo (escribir abajo) —</option>' +
+    window._clientesCaja.map(function(c){return '<option value="'+c.id+'">'+(c.nombre||'')+'</option>';}).join('');
+  sel.value = actual;
+}, function(err){ console.log('No se pudo leer clientes de Caja:', err.message); });
+
+// Al elegir un cliente del desplegable, autocompletar el campo de texto
+window.elegirClienteCaja = function(){
+  var sel = document.getElementById('cliente-sel');
+  var c = window._clientesCaja.find(function(x){return x.id===sel.value;});
+  if(c){ document.getElementById('cliente').value = c.nombre; }
+  if(typeof calcular==='function') calcular();
+};
+
 // ── Data ──────────────────────────────────────────────────────────────────────
 const ESCALA = [
   { min:1,   max:40,       precio:45000, label:"1 – 40 bocas" },
@@ -466,6 +510,7 @@ function calcular() {
   });
 
   const totalGeneral = totalBocasMonto + totalItems;
+  window._totalActual = totalGeneral;
 
   // Resumen
   const resumen = document.getElementById("seccion-resumen");
@@ -717,8 +762,55 @@ function exportarPDF() {
   doc.save(`Presupuesto-Voltum-${nro}.pdf`);
 }
 
+// ── Guardar el presupuesto en Caja (queda PENDIENTE hasta confirmarlo allá) ────
+window.guardarPresupuesto = function(){
+  var sel = document.getElementById('cliente-sel');
+  var cliente = getV('cliente').trim();
+  var obra = getV('obra').trim();
+  var total = Number(window._totalActual)||0;
+  if(!cliente){ alert('Elegí o escribí el cliente antes de guardar.'); return; }
+  if(!obra){ alert('Poné la dirección / nombre de la obra antes de guardar.'); return; }
+  if(total<=0){ alert('El presupuesto está en $0. Cargá los ítems antes de guardar.'); return; }
+  if(!confirm('¿Guardar este presupuesto en Caja?\n\nCliente: '+cliente+'\nObra: '+obra+'\nValor: $'+total.toLocaleString('es-AR')+'\n\nVa a quedar PENDIENTE hasta que lo confirmes desde la app de Caja.')) return;
+
+  var btn = document.getElementById('btn-caja');
+  var txtPrev = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Guardando...';
+
+  // clienteId: si eligió uno del desplegable y el nombre coincide, lo usamos; si no, va vacío (se resuelve al confirmar en Caja)
+  var cliId = '';
+  if(sel && sel.value){
+    var cSel = window._clientesCaja.find(function(x){return x.id===sel.value;});
+    if(cSel && cSel.nombre && cSel.nombre.trim().toLowerCase()===cliente.toLowerCase()) cliId = cSel.id;
+  }
+  if(!cliId){
+    var cMatch = (window._clientesCaja||[]).find(function(x){return x.nombre && x.nombre.trim().toLowerCase()===cliente.toLowerCase();});
+    if(cMatch) cliId = cMatch.id;
+  }
+
+  var pid = cajaUID();
+  cajaDB.collection('presupuestos').doc(pid).set({
+    id: pid,
+    clienteId: cliId,
+    clienteNombre: cliente,
+    obra: obra,
+    valor: total,
+    fecha: hoyISO(),
+    estado: 'pendiente',
+    obraId: ''
+  }).then(function(){
+    btn.textContent = '✓ GUARDADO EN CAJA (pendiente)';
+    alert('Listo. El presupuesto de "'+cliente+'" quedó guardado en Caja como PENDIENTE.\n\nAhora podés confirmarlo desde la app de Caja, en la sección Obras.');
+  }).catch(function(e){
+    btn.disabled = false; btn.textContent = txtPrev;
+    alert('No se pudo guardar en Caja: '+e.message);
+  });
+};
+
 // ── Nuevo presupuesto ─────────────────────────────────────────────────────────
 function nuevoPresupuesto() {
+  var bc=document.getElementById('btn-caja'); if(bc){ bc.disabled=false; bc.textContent='✓ GUARDAR PRESUPUESTO EN CAJA'; }
+  var cs=document.getElementById('cliente-sel'); if(cs) cs.value='';
   document.getElementById("cliente").value="";
   document.getElementById("obra").value="";
   document.getElementById("notas").value="";
