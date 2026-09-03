@@ -771,7 +771,7 @@ window.guardarPresupuesto = function(){
   if(!cliente){ alert('Elegí o escribí el cliente antes de guardar.'); return; }
   if(!obra){ alert('Poné la dirección / nombre de la obra antes de guardar.'); return; }
   if(total<=0){ alert('El presupuesto está en $0. Cargá los ítems antes de guardar.'); return; }
-  if(!confirm('¿Guardar este presupuesto en Caja?\n\nCliente: '+cliente+'\nObra: '+obra+'\nValor: $'+total.toLocaleString('es-AR')+'\n\nVa a quedar PENDIENTE hasta que lo confirmes desde la app de Caja.')) return;
+  if(!confirm('¿Guardar este presupuesto en Caja?\n\nCliente: '+cliente+'\nObra: '+obra+'\nValor: $'+total.toLocaleString('es-AR')+'\n\nSe van a crear el cliente (si es nuevo) y la obra en la Caja directamente.')) return;
 
   var btn = document.getElementById('btn-caja');
   var txtPrev = btn.textContent;
@@ -788,19 +788,22 @@ window.guardarPresupuesto = function(){
     if(cMatch) cliId = cMatch.id;
   }
 
+  // Crear cliente en Caja si es nuevo (no existe por id ni por nombre)
+  var preCli = Promise.resolve();
+  if(!cliId){
+    cliId = cajaUID();
+    preCli = cajaDB.collection('clientes').doc(cliId).set({id:cliId, nombre:cliente, cuit:'', tel:'', email:'', notas:'Creado desde Presupuesto'});
+  }
+
+  var obraId = cajaUID();
   var pid = cajaUID();
-  cajaDB.collection('presupuestos').doc(pid).set({
-    id: pid,
-    clienteId: cliId,
-    clienteNombre: cliente,
-    obra: obra,
-    valor: total,
-    fecha: hoyISO(),
-    estado: 'pendiente',
-    obraId: ''
+  preCli.then(function(){
+    return cajaDB.collection('obras').doc(obraId).set({id:obraId, nombre:obra, clienteId:cliId, valor:total, inicio:hoyISO(), estado:'activa', notas:'Creada desde Presupuesto'});
   }).then(function(){
-    btn.textContent = '✓ GUARDADO EN CAJA (pendiente)';
-    alert('Listo. El presupuesto de "'+cliente+'" quedó guardado en Caja como PENDIENTE.\n\nAhora podés confirmarlo desde la app de Caja, en la sección Obras.');
+    return cajaDB.collection('presupuestos').doc(pid).set({id:pid, clienteId:cliId, clienteNombre:cliente, obra:obra, valor:total, fecha:hoyISO(), estado:'confirmado', obraId:obraId});
+  }).then(function(){
+    btn.textContent = '✓ CARGADO EN CAJA';
+    alert('Listo. Se crearon en la Caja el cliente (si era nuevo) y la obra.');
   }).catch(function(e){
     btn.disabled = false; btn.textContent = txtPrev;
     alert('No se pudo guardar en Caja: '+e.message);
