@@ -454,10 +454,6 @@
   <div class="totals-grid">
     <div class="tot-card">
       <div class="opt-row">
-        <span class="lbl">Mano de obra</span>
-        <input class="mo-in" id="manoObra" type="text" inputmode="decimal" value="0">
-      </div>
-      <div class="opt-row">
         <label class="switch" for="ivaChk">
           <input type="checkbox" id="ivaChk">
           <span class="track"></span><span class="knob"></span>
@@ -471,10 +467,9 @@
     </div>
 
     <div class="sum-card">
-      <div class="sum-line"><span>Materiales / ítems</span><span class="v" id="sumItems">$ 0</span></div>
-      <div class="sum-line"><span>Mano de obra</span><span class="v" id="sumMo">$ 0</span></div>
-      <div class="sum-line" id="lineIva" hidden><span>IVA 21%</span><span class="v" id="sumIva">$ 0</span></div>
-      <div class="sum-div"></div>
+      <div class="sum-line" id="lineIva" hidden><span>Subtotal</span><span class="v" id="sumBase">$ 0</span></div>
+      <div class="sum-line" id="lineIva2" hidden><span>IVA 21%</span><span class="v" id="sumIva">$ 0</span></div>
+      <div class="sum-div" id="sumDiv" hidden></div>
       <div class="sum-total"><span class="t">TOTAL</span><span class="g" id="grandTotal">$ 0</span></div>
       <div class="count-badge" id="countBadge">0 ítems · 0 bocas</div>
     </div>
@@ -538,13 +533,12 @@
       <div class="rules-card">
         <h3>Reglas de cómputo</h3>
         <ul>
-          <li><b>Tomacorriente</b> → 1 caja 10x5 · 2 conectores</li>
-          <li><b>Llave de luz</b> → 1 caja 10x5 · 2 conectores</li>
-          <li><b>Iluminación en losa (octogonal)</b> → 1 caja octogonal · 3 conectores</li>
-          <li><b>Iluminación en cielorraso (octogonal)</b> → 1 caja octogonal · 3 conectores</li>
-          <li><b>Iluminación en pared (5x5)</b> → 1 caja 5x5 · 2 conectores</li>
+          <li><b>Boca Tomacorrientes</b> → 1 caja 10x5 · 2 conectores</li>
+          <li><b>Boca Iluminación (sin artefactos)</b> → 1 caja octogonal · 2 conectores</li>
+          <li><b>Boca Señales débiles 10x5</b> → 1 caja 10x5</li>
+          <li><b>Boca Señales débiles 5x5</b> → 1 caja 5x5</li>
         </ul>
-        <p class="rules-foot">Tablero, térmicas y diferencial no computan cajas ni conectores. Los ítems en blanco tampoco suman materiales.</p>
+        <p class="rules-foot">Cavado de jabalina/acometida, armado de tablero y los ítems en blanco no computan cajas ni conectores.</p>
       </div>
     </div>
 
@@ -706,19 +700,22 @@
   "use strict";
 
   var CATALOG = [
-    {tipo:"toma", nombre:"Tomacorrientes", unidad:"boca", cant:10, precio:8500},
-    {tipo:"llave", nombre:"Llaves de luz", unidad:"boca", cant:8, precio:7800},
-    {tipo:"luz_losa", nombre:"Iluminación en losa (octogonal)", unidad:"boca", cant:6, precio:9200},
-    {tipo:"luz_cielo", nombre:"Iluminación en cielorraso (octogonal)", unidad:"boca", cant:4, precio:9800},
-    {tipo:"luz_pared", nombre:"Iluminación en pared (caja 5x5)", unidad:"boca", cant:3, precio:8900},
-    {tipo:"tablero", nombre:"Tablero", unidad:"u", cant:1, precio:45000},
-    {tipo:"termicas", nombre:"Térmicas", unidad:"u", cant:4, precio:12500},
-    {tipo:"diferencial", nombre:"Diferencial", unidad:"u", cant:1, precio:28000}
+    {tipo:"toma", nombre:"Boca Tomacorrientes", unidad:"boca", cant:10, precio:43500},
+    {tipo:"luz", nombre:"Boca Iluminación (sin artefactos)", unidad:"boca", cant:8, precio:43500}, 
+    {tipo:"sd105", nombre:"Boca Señales débiles 10x5", unidad:"boca", cant:2, precio:43500},
+    {tipo:"sd55", nombre:"Boca Señales débiles 5x5", unidad:"boca", cant:2, precio:43500}, 
+    {tipo:"armado_tab", nombre:"Armado de tablero eléctrico", unidad:"u", cant:1, precio:230000},
+    {tipo:"jabalina", nombre:"Cavado y conexión de jabalina PAT", unidad:"u", cant:1, precio:80000},
+    {tipo:"acometida", nombre:"Cavado y conexión de acometida < 15m", unidad:"u", cant:1, precio:110000}
   ];
 
   // Materiales que consume cada tipo, por unidad: [idMaterial, cantidad]
   var MAT_RULES = {
-    toma:      [["cja105",1],["conx",2]],
+    toma:      [["cja105",1],["conx",2]],   // Boca Tomacorrientes
+    luz:       [["octo",1],["conx",2]],      // Boca Iluminación
+    sd105:     [["cja105",1]],               // Señales débiles 10x5 → caja 10x5
+    sd55:      [["cja55",1]],                // Señales débiles 5x5 → caja 5x5
+    // compatibilidad con presupuestos guardados con el catálogo anterior
     llave:     [["cja105",1],["conx",2]],
     luz_losa:  [["octo",1],["conx",3]],
     luz_cielo: [["octo",1],["conx",3]],
@@ -855,15 +852,14 @@
   function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
   function recalc(){
-    var items = state.items.reduce(function(a,it){return a+ (it.cant*it.precio);},0);
-    var mo = state.manoObra||0;
-    var base = items+mo;
+    var base = state.items.reduce(function(a,it){return a+ (it.cant*it.precio);},0);
     var iva = state.iva ? base*0.21 : 0;
     var total = base+iva;
 
-    document.getElementById("sumItems").textContent = fmt.format(items);
-    document.getElementById("sumMo").textContent = fmt.format(mo);
     document.getElementById("lineIva").hidden = !state.iva;
+    document.getElementById("lineIva2").hidden = !state.iva;
+    document.getElementById("sumDiv").hidden = !state.iva;
+    document.getElementById("sumBase").textContent = fmt.format(base);
     document.getElementById("sumIva").textContent = fmt.format(iva);
     document.getElementById("grandTotal").textContent = fmt.format(total);
 
@@ -931,13 +927,11 @@
       body.appendChild(tr);
     });
 
-    var items=state.items.reduce(function(a,it){return a+(it.cant*it.precio);},0);
-    var mo=state.manoObra||0, base=items+mo, iva=state.iva?base*0.21:0, total=base+iva;
+    var base=state.items.reduce(function(a,it){return a+(it.cant*it.precio);},0);
+    var iva=state.iva?base*0.21:0, total=base+iva;
     var lines=document.getElementById("ps-tot-lines"); lines.innerHTML="";
     function line(lbl,val){ lines.insertAdjacentHTML("beforeend",'<div class="ps-tot-line"><span>'+lbl+'</span><span class="v">'+fmt.format(val)+'</span></div>'); }
-    line("Subtotal", items);
-    if(mo>0) line("Mano de obra", mo);
-    if(state.iva) line("IVA 21%", iva);
+    if(state.iva){ line("Subtotal", base); line("IVA 21%", iva); }
     document.getElementById("ps-total").textContent = fmt.format(total);
 
     document.getElementById("ps-notes").textContent = state.notas||"";
@@ -979,11 +973,6 @@
     var nt=document.getElementById("f_notas");
     nt.value=state.notas||"";
     nt.addEventListener("input", function(){ state.notas=nt.value; save(); });
-
-    var mo=document.getElementById("manoObra");
-    mo.value=numDisp(state.manoObra);
-    mo.addEventListener("input", function(){ state.manoObra=parseNum(mo.value); recalc(); save(); });
-    mo.addEventListener("blur", function(){ mo.value=numDisp(state.manoObra); });
 
     var iva=document.getElementById("ivaChk");
     iva.checked=!!state.iva;
@@ -1289,8 +1278,7 @@
   function cajaUID(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
   function hoyISO(){ var d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
   function totalActual(){
-    var items=state.items.reduce(function(a,it){return a+(it.cant*it.precio);},0);
-    var base=items+(state.manoObra||0);
+    var base=state.items.reduce(function(a,it){return a+(it.cant*it.precio);},0);
     return base+(state.iva?base*0.21:0);
   }
   function resetBtnCaja(){ var b=document.getElementById("btnCaja"); if(b){ b.disabled=false; b.textContent="✓ Guardar en Caja (registro de obras)"; } }
