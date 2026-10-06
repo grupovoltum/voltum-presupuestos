@@ -476,7 +476,7 @@
   </div>
 
   <div class="caja-bar">
-    <button class="btn-caja" id="btnCaja">✓ Guardar en Caja (registro de obras)</button>
+    <button class="btn-caja" id="btnCaja">✓ Crear obra (pendiente de confirmar)</button>
     <span class="caja-status" id="cajaStatus"></span>
   </div>
 
@@ -1281,7 +1281,7 @@
     var base=state.items.reduce(function(a,it){return a+(it.cant*it.precio);},0);
     return base+(state.iva?base*0.21:0);
   }
-  function resetBtnCaja(){ var b=document.getElementById("btnCaja"); if(b){ b.disabled=false; b.textContent="✓ Guardar en Caja (registro de obras)"; } }
+  function resetBtnCaja(){ var b=document.getElementById("btnCaja"); if(b){ b.disabled=false; b.textContent="✓ Crear obra (pendiente de confirmar)"; } }
 
   function initCaja(){
     var btn=document.getElementById("btnCaja");
@@ -1321,7 +1321,7 @@
     if(!cliente){ alert("Cargá el cliente antes de guardar en Caja."); return; }
     if(!obra){ alert("Cargá la dirección / obra antes de guardar en Caja."); return; }
     if(total<=0){ alert("El presupuesto está en $0. Cargá ítems antes de guardar."); return; }
-    if(!confirm("¿Guardar este presupuesto en la Caja?\n\nCliente: "+cliente+"\nObra: "+obra+"\nValor: $"+total.toLocaleString("es-AR")+"\n\nSe crean el cliente (si es nuevo) y la obra en el registro.")) return;
+    if(!confirm("¿Guardar este presupuesto en la Caja?\n\nCliente: "+cliente+"\nObra: "+obra+"\nValor: $"+total.toLocaleString("es-AR")+"\n\nSe crea la obra como PENDIENTE DE CONFIRMAR (y el cliente si es nuevo).")) return;
 
     var btn=document.getElementById("btnCaja"), prev=btn.textContent;
     btn.disabled=true; btn.textContent="Guardando…";
@@ -1331,14 +1331,16 @@
 
     var preCli=Promise.resolve();
     if(!cliId){ cliId=cajaUID(); preCli=db.collection("clientes").doc(cliId).set({id:cliId,nombre:cliente,cuit:"",tel:"",email:"",notas:"Creado desde Presupuesto"}); }
-    var obraId=cajaUID(), pid=cajaUID();
+    var obraId=cajaUID();
+    var _mats=computeMaterials();
+    var matList=MAT_DEFS.map(function(m){return {nombre:m.nombre,unidad:m.unidad,cant:_mats[m.id]||0};}).filter(function(x){return x.cant>0;});
     preCli.then(function(){
-      return db.collection("obras").doc(obraId).set({id:obraId,nombre:obra,clienteId:cliId,valor:total,inicio:hoyISO(),estado:"activa",notas:"Creada desde Presupuesto"+(state.num?(" N° "+state.num):"")});
+      return db.collection("obras").doc(obraId).set({id:obraId,nombre:obra,clienteId:cliId,valor:total,inicio:hoyISO(),estado:"pendiente",notas:"Creada desde Presupuesto"+(state.num?(" N° "+state.num):"")});
     }).then(function(){
-      return db.collection("presupuestos").doc(pid).set({id:pid,clienteId:cliId,clienteNombre:cliente,obra:obra,valor:total,fecha:hoyISO(),estado:"confirmado",obraId:obraId});
+      return db.collection("obras_prod").doc(obraId).set({materiales:matList,presupuesto:{total:total,num:(state.num||""),fecha:hoyISO()}},{merge:true});
     }).then(function(){
-      btn.textContent="✓ Cargado en Caja";
-      alert("Listo. Se cargó la obra en el registro (y el cliente si era nuevo).");
+      btn.textContent="✓ Obra creada (pendiente)";
+      alert("Listo. La obra quedó creada como PENDIENTE DE CONFIRMAR, con sus materiales. La confirmás desde Obras en la Voltum Page.");
     }).catch(function(e){
       btn.disabled=false; btn.textContent=prev;
       alert("No se pudo guardar en Caja: "+e.message);
