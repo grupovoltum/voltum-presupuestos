@@ -433,21 +433,12 @@
 
   <div class="table-card">
     <div class="tbl-scroll">
-      <table>
-        <thead>
-          <tr>
-            <th class="l">Ítem</th>
-            <th>Cant.</th>
-            <th>P. unitario</th>
-            <th>Subtotal</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="rows"></tbody>
-      </table>
+      <div id="ambBlocks"></div>
+      <datalist id="amb-dl"><option value="Toilette"><option value="Cochera"><option value="Cocina"><option value="Living/Sala de estar"><option value="Dormitorio"><option value="Dormitorio suite"><option value="Baño suite"><option value="Baño"><option value="Lavadero"><option value="Patio"><option value="Asador"><option value="Terraza"></datalist>
     </div>
-    <div class="add-row">
-      <div class="presets" id="presets"></div>
+    <div class="add-row" style="gap:8px;align-items:center">
+      <input id="newAmbInput" list="amb-dl" placeholder="Nombre del ambiente (ej: Cocina)" style="flex:1;min-width:150px;padding:9px 12px;border:1px solid var(--line,#ccc);border-radius:8px">
+      <button class="chip" id="addAmb" style="white-space:nowrap">+ Crear ambiente</button>
     </div>
   </div>
 
@@ -701,7 +692,8 @@
 
   var CATALOG = [
     {tipo:"toma", nombre:"Boca Tomacorrientes", unidad:"boca", cant:10, precio:43500},
-    {tipo:"luz", nombre:"Boca Iluminación (sin artefactos)", unidad:"boca", cant:8, precio:43500}, 
+    {tipo:"luz", nombre:"Boca Iluminación (sin artefactos)", unidad:"boca", cant:8, precio:43500},
+    {tipo:"luz", nombre:"Boca Punto de luz", unidad:"boca", cant:1, precio:43500}, 
     {tipo:"sd105", nombre:"Boca Señales débiles 10x5", unidad:"boca", cant:2, precio:43500},
     {tipo:"sd55", nombre:"Boca Señales débiles 5x5", unidad:"boca", cant:2, precio:43500}, 
     {tipo:"armado_tab", nombre:"Armado de tablero eléctrico", unidad:"u", cant:1, precio:230000},
@@ -763,7 +755,7 @@
       ]}
     ],
     matObra:[], matCab:[],
-    items: CATALOG.map(function(c,i){return {id:"i"+i+"_"+Date.now(), tipo:c.tipo, nombre:c.nombre, unidad:c.unidad, cant:c.cant, precio:c.precio};})
+    items: [], ambientes: []
   };
 
   function uid(){ return "i"+Math.random().toString(36).slice(2,8)+Date.now().toString(36); }
@@ -780,6 +772,12 @@
     // Migración: inferir tipo por nombre para ítems guardados sin tipo
     var byName={}; CATALOG.forEach(function(c){ byName[c.nombre]=c.tipo; });
     state.items.forEach(function(it){ if(!it.tipo){ it.tipo = byName[it.nombre] || null; } });
+    if(!Array.isArray(state.ambientes)) state.ambientes=[];
+    // Limpieza: descartar ítems huérfanos (sin ambiente) que quedaban sumando invisibles
+    state.items = state.items.filter(function(it){ return (it.ambiente||"").trim()!==""; });
+    // Asegurar que todo ítem con ambiente tenga su bloque visible (consistencia total/visible)
+    state.items.forEach(function(it){ var a=(it.ambiente||"").trim(); it.ambiente=a; if(state.ambientes.indexOf(a)<0) state.ambientes.push(a); });
+    try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
     if(typeof state.tabTermOtro!=="string") state.tabTermOtro="";
     if(typeof state.tabDifOtro!=="string") state.tabDifOtro="";
     if(typeof state.notas!=="string") state.notas="Los valores no incluyen materiales ni trabajos no detallados en este presupuesto. Presupuesto válido por 15 días.";
@@ -813,40 +811,56 @@
   }
 
   /* ---- rendering ---- */
-  var rowsEl = document.getElementById("rows");
-
+  var rowsEl = document.getElementById("ambBlocks");
+  function itemRowHTML(it){
+    return '<tr data-id="'+it.id+'">'+
+      '<td class="cell-name"><input data-f="nombre" value="'+esc(it.nombre)+'" aria-label="Nombre"><span class="unit-badge">'+esc(it.unidad||"u")+'</span></td>'+
+      '<td class="right"><input class="num-in qty" data-f="cant" inputmode="decimal" value="'+numDisp(it.cant)+'"></td>'+
+      '<td class="right"><input class="num-in" data-f="precio" inputmode="decimal" value="'+numDisp(it.precio)+'"></td>'+
+      '<td class="subtot" data-sub>'+fmt.format(it.cant*it.precio)+'</td>'+
+      '<td class="right"><button class="del" title="Eliminar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button></td>'+
+    '</tr>';
+  }
   function renderRows(){
+    state.ambientes=Array.isArray(state.ambientes)?state.ambientes:[];
+    state.items.forEach(function(it){var a=(it.ambiente||"").trim(); if(a && state.ambientes.indexOf(a)<0) state.ambientes.push(a);});
     rowsEl.innerHTML="";
-    state.items.forEach(function(it){
-      var tr=document.createElement("tr");
-      tr.innerHTML =
-        '<td class="cell-name">'+
-          '<input data-f="nombre" value="'+esc(it.nombre)+'" aria-label="Nombre del ítem">'+
-          '<span class="unit-badge">'+esc(it.unidad||"u")+'</span>'+
-        '</td>'+
-        '<td class="right"><input class="num-in qty" data-f="cant" inputmode="decimal" value="'+numDisp(it.cant)+'" aria-label="Cantidad"></td>'+
-        '<td class="right"><input class="num-in" data-f="precio" inputmode="decimal" value="'+numDisp(it.precio)+'" aria-label="Precio unitario"></td>'+
-        '<td class="subtot" data-sub>'+fmt.format(it.cant*it.precio)+'</td>'+
-        '<td class="right"><button class="del" title="Eliminar" aria-label="Eliminar ítem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button></td>';
-
-      tr.querySelectorAll("input").forEach(function(inp){
-        inp.addEventListener("input", function(){
-          var f=inp.getAttribute("data-f");
-          if(f==="nombre"){ it.nombre=inp.value; }
-          else { it[f]=parseNum(inp.value); tr.querySelector("[data-sub]").textContent=fmt.format(it.cant*it.precio); recalc(); }
-          save();
+    if(!state.ambientes.length){ rowsEl.innerHTML='<div style="padding:26px 14px;text-align:center;color:var(--ink-faint);font-size:14px">Todavía no hay ambientes. Creá el primero abajo 👇</div>'; return; }
+    state.ambientes.forEach(function(ambNombre){
+      var its=state.items.filter(function(x){return ((x.ambiente||"").trim())===ambNombre;});
+      var sub=its.reduce(function(a,x){return a+(x.cant*x.precio);},0);
+      var block=document.createElement("div");
+      block.style.cssText="border:1px solid var(--line);border-radius:12px;margin-bottom:14px;overflow:hidden";
+      var head='<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--surface-2);border-bottom:1px solid var(--line)"><strong style="flex:1;font-size:14px;color:var(--ink)">'+esc(ambNombre)+'</strong><span style="font-size:12px;color:var(--ink-faint)">'+fmt.format(sub)+'</span><button data-ren="1" title="Renombrar" style="border:none;background:transparent;cursor:pointer;font-size:14px;padding:4px;color:var(--ink-soft)">✎</button><button data-del="1" title="Quitar ambiente" style="border:none;background:transparent;cursor:pointer;font-size:14px;padding:4px;color:var(--danger)">✕</button></div>';
+      var rows=its.length?its.map(itemRowHTML).join(''):'<tr><td colspan="5" style="padding:12px 14px;color:var(--ink-faint);font-size:13px">Sin ítems todavía. Agregá abajo.</td></tr>';
+      var table='<div class="tbl-scroll"><table><thead><tr><th class="l">Ítem</th><th>Cant.</th><th>P. unitario</th><th>Subtotal</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+      var chips=CATALOG.map(function(c,ci){return '<button class="chip" data-add="'+ci+'">+ '+esc(c.nombre)+'</button>';}).join('')+'<button class="chip blank" data-add="blank">+ Ítem en blanco</button>';
+      block.innerHTML=head+table+'<div class="add-row" style="padding:8px 12px"><div class="presets">'+chips+'</div></div>';
+      rowsEl.appendChild(block);
+      block.querySelector('[data-ren]').addEventListener('click',function(){renameAmbiente(ambNombre);});
+      block.querySelector('[data-del]').addEventListener('click',function(){delAmbiente(ambNombre);});
+      block.querySelectorAll('tr[data-id]').forEach(function(tr){
+        var id=tr.getAttribute('data-id'); var it=state.items.find(function(x){return x.id===id;}); if(!it)return;
+        tr.querySelectorAll('input').forEach(function(inp){
+          inp.addEventListener('input',function(){var f=inp.getAttribute('data-f'); if(f==='nombre'){it.nombre=inp.value;} else {it[f]=parseNum(inp.value); var sc=tr.querySelector('[data-sub]'); if(sc)sc.textContent=fmt.format(it.cant*it.precio); recalc();} save();});
+          if(inp.classList.contains('num-in')) inp.addEventListener('blur',function(){inp.value=numDisp(it[inp.getAttribute('data-f')]);});
         });
-        if(inp.classList.contains("num-in")){
-          inp.addEventListener("blur", function(){ inp.value=numDisp(it[inp.getAttribute("data-f")]); });
-        }
+        var del=tr.querySelector('.del'); if(del) del.addEventListener('click',function(){state.items=state.items.filter(function(x){return x.id!==it.id;}); renderRows(); recalc(); save();});
       });
-      tr.querySelector(".del").addEventListener("click", function(){
-        state.items = state.items.filter(function(x){return x.id!==it.id;});
-        renderRows(); recalc(); save();
+      block.querySelectorAll('[data-add]').forEach(function(btn){
+        btn.addEventListener('click',function(){
+          var w=btn.getAttribute('data-add');
+          if(w==='blank'){ state.items.push({id:uid(),tipo:null,nombre:"",unidad:"u",cant:1,precio:0,ambiente:ambNombre}); }
+          else { var c=CATALOG[+w]; state.items.push({id:uid(),tipo:c.tipo,nombre:c.nombre,unidad:c.unidad,cant:1,precio:c.precio,ambiente:ambNombre}); }
+          renderRows(); recalc(); save();
+        });
       });
-      rowsEl.appendChild(tr);
     });
   }
+  function addAmbiente(nombre){ nombre=(nombre||"").trim(); if(!nombre){alert("Escribí un nombre de ambiente.");return;} state.ambientes=Array.isArray(state.ambientes)?state.ambientes:[]; if(state.ambientes.some(function(a){return a.toLowerCase()===nombre.toLowerCase();})){alert("Ese ambiente ya existe.");return;} state.ambientes.push(nombre); save(); renderRows(); recalc(); }
+  function renameAmbiente(old){ var nn=prompt("Nuevo nombre del ambiente:",old); if(nn===null)return; nn=nn.trim(); if(!nn)return; if(nn.toLowerCase()!==old.toLowerCase() && state.ambientes.some(function(a){return a.toLowerCase()===nn.toLowerCase();})){alert("Ya existe un ambiente con ese nombre.");return;} var i=state.ambientes.indexOf(old); if(i>=0)state.ambientes[i]=nn; state.items.forEach(function(it){ if(((it.ambiente||"").trim())===old) it.ambiente=nn; }); save(); renderRows(); }
+  function delAmbiente(nombre){ var its=state.items.filter(function(x){return ((x.ambiente||"").trim())===nombre;}); if(!confirm('¿Quitar el ambiente "'+nombre+'"'+(its.length?(' y sus '+its.length+' ítem(s)'):'')+'?'))return; state.ambientes=state.ambientes.filter(function(a){return a!==nombre;}); state.items=state.items.filter(function(x){return ((x.ambiente||"").trim())!==nombre;}); save(); renderRows(); recalc(); }
+  function bindAmbUI(){ var b=document.getElementById("addAmb"), inp=document.getElementById("newAmbInput"); if(b)b.addEventListener("click",function(){addAmbiente(inp.value); inp.value=""; if(inp)inp.focus();}); if(inp)inp.addEventListener("keydown",function(e){if(e.key==="Enter"){addAmbiente(inp.value); inp.value="";}}); }
 
   function numDisp(n){ return fmt2.format(n||0); }
   function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
@@ -940,26 +954,7 @@
   }
 
   /* ---- presets ---- */
-  function renderPresets(){
-    var p=document.getElementById("presets"); p.innerHTML="";
-    CATALOG.forEach(function(c){
-      var b=document.createElement("button");
-      b.className="chip"; b.textContent="+ "+c.nombre;
-      b.addEventListener("click", function(){
-        state.items.push({id:uid(), tipo:c.tipo, nombre:c.nombre, unidad:c.unidad, cant:1, precio:c.precio});
-        renderRows(); recalc(); save();
-      });
-      p.appendChild(b);
-    });
-    var blank=document.createElement("button");
-    blank.className="chip blank"; blank.textContent="+ Ítem en blanco";
-    blank.addEventListener("click", function(){
-      state.items.push({id:uid(), tipo:null, nombre:"", unidad:"u", cant:1, precio:0});
-      renderRows(); recalc(); save();
-      var last=rowsEl.querySelector("tr:last-child input"); if(last) last.focus();
-    });
-    p.appendChild(blank);
-  }
+  function renderPresets(){}
 
   /* ---- header fields ---- */
   function bindHead(){
@@ -1334,10 +1329,16 @@
     var obraId=cajaUID();
     var _mats=computeMaterials();
     var matList=MAT_DEFS.map(function(m){return {nombre:m.nombre,unidad:m.unidad,cant:_mats[m.id]||0};}).filter(function(x){return x.cant>0;});
+    var AMB_MAP={toma:"Tomacorrientes",luz:"Puntos de luz",sd105:"Señales débiles",sd55:"Señales débiles",luz_losa:"Iluminación en losa",luz_pared:"Aplique en pared",llave:"Puntos de luz",luz_cielo:"Puntos de luz"};
+    var _tiposSet={};
+    var _names=(Array.isArray(state.ambientes)?state.ambientes:[]).slice();
+    state.items.forEach(function(it){var a=(it.ambiente||"").trim(); if(a && _names.indexOf(a)<0) _names.push(a);});
+    var _ambientes=_names.map(function(nombre){var bocas={};state.items.forEach(function(it){ if((it.unidad||"")!=="boca")return; if((((it.ambiente||"").trim())||"General")!==nombre)return; var tObra=AMB_MAP[it.tipo]||(it.nombre||"Boca"); bocas[tObra]=(bocas[tObra]||0)+(Number(it.cant)||0); _tiposSet[tObra]=1; });return {id:cajaUID(),nombre:nombre,bocas:bocas,tareas:{}};});
+    var _tiposArr=Object.keys(_tiposSet);
     preCli.then(function(){
       return db.collection("obras").doc(obraId).set({id:obraId,nombre:obra,clienteId:cliId,valor:total,inicio:hoyISO(),estado:"pendiente",notas:"Creada desde Presupuesto"+(state.num?(" N° "+state.num):"")});
     }).then(function(){
-      return db.collection("obras_prod").doc(obraId).set({materiales:matList,presupuesto:{total:total,num:(state.num||""),fecha:hoyISO()}},{merge:true});
+      return db.collection("obras_prod").doc(obraId).set({ambientes:_ambientes,tipos:_tiposArr,materiales:matList,presupuesto:{total:total,num:(state.num||""),fecha:hoyISO()}},{merge:true});
     }).then(function(){
       btn.textContent="✓ Obra creada (pendiente)";
       alert("Listo. La obra quedó creada como PENDIENTE DE CONFIRMAR, con sus materiales. La confirmás desde Obras en la Voltum Page.");
@@ -1348,7 +1349,7 @@
   }
 
   /* ---- init ---- */
-  load(); bindHead(); renderPresets(); renderRows(); recalc(); bindTablero(); renderTablero(); bindExtras(); initCaja();
+  load(); bindHead(); renderPresets(); renderRows(); bindAmbUI(); recalc(); bindTablero(); renderTablero(); bindExtras(); initCaja();
   try{ var savedTab=localStorage.getItem("presup_tab"); if(savedTab) setTab(savedTab); }catch(e){}
   try{ var savedSub=localStorage.getItem("presup_sub"); if(savedSub) setSub(savedSub); }catch(e){}
 })();
