@@ -123,7 +123,9 @@
   .hint{font-size:12px;color:var(--ink-faint)}
   .table-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
   .tbl-scroll{overflow-x:auto}
-  table{width:100%;border-collapse:collapse;min-width:560px}
+  table{width:100%;border-collapse:collapse;min-width:560px;color:var(--ink)}
+  tbody td{color:var(--ink)}
+  .subtot{color:var(--ink)}
   thead th{
     font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);
     font-weight:700;text-align:right;padding:11px 12px;background:var(--surface-2);
@@ -692,10 +694,12 @@
 
   var CATALOG = [
     {tipo:"toma", nombre:"Boca Tomacorrientes", unidad:"boca", cant:10, precio:43500},
+    {tipo:"toma", nombre:"Boca Tomacorrientes especiales", unidad:"boca", cant:1, precio:43500},
     {tipo:"luz", nombre:"Boca Iluminación (sin artefactos)", unidad:"boca", cant:8, precio:43500},
     {tipo:"luz", nombre:"Boca Punto de luz", unidad:"boca", cant:1, precio:43500}, 
     {tipo:"sd105", nombre:"Boca Señales débiles 10x5", unidad:"boca", cant:2, precio:43500},
-    {tipo:"sd55", nombre:"Boca Señales débiles 5x5", unidad:"boca", cant:2, precio:43500}, 
+    {tipo:"sd55", nombre:"Boca Señales débiles 5x5", unidad:"boca", cant:2, precio:43500},
+    {tipo:"artefactos", nombre:"Colocación de artefactos", unidad:"artefacto", cant:1, precio:15000},
     {tipo:"armado_tab", nombre:"Armado de tablero eléctrico", unidad:"u", cant:1, precio:230000},
     {tipo:"jabalina", nombre:"Cavado y conexión de jabalina PAT", unidad:"u", cant:1, precio:80000},
     {tipo:"acometida", nombre:"Cavado y conexión de acometida < 15m", unidad:"u", cant:1, precio:110000}
