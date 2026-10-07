@@ -831,7 +831,7 @@
       var sub=its.reduce(function(a,x){return a+(x.cant*x.precio);},0);
       var block=document.createElement("div");
       block.style.cssText="border:1px solid var(--line);border-radius:12px;margin-bottom:14px;overflow:hidden";
-      var head='<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--surface-2);border-bottom:1px solid var(--line)"><strong style="flex:1;font-size:14px;color:var(--ink)">'+esc(ambNombre)+'</strong><span style="font-size:12px;color:var(--ink-faint)">'+fmt.format(sub)+'</span><button data-ren="1" title="Renombrar" style="border:none;background:transparent;cursor:pointer;font-size:14px;padding:4px;color:var(--ink-soft)">✎</button><button data-del="1" title="Quitar ambiente" style="border:none;background:transparent;cursor:pointer;font-size:14px;padding:4px;color:var(--danger)">✕</button></div>';
+      var head='<div style="display:flex;align-items:center;gap:8px;padding:11px 14px;background:color-mix(in srgb,var(--accent) 14%,var(--surface));border-bottom:1px solid var(--line)"><strong style="flex:1;font-size:14.5px;font-weight:700;color:var(--ink)">'+esc(ambNombre)+'</strong><span style="font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--ink-soft)">'+fmt.format(sub)+'</span><button data-ren="1" title="Renombrar" style="border:none;background:transparent;cursor:pointer;font-size:14px;padding:4px;color:var(--ink-soft)">✎</button><button data-del="1" title="Quitar ambiente" style="border:none;background:transparent;cursor:pointer;font-size:14px;padding:4px;color:var(--danger)">✕</button></div>';
       var rows=its.length?its.map(itemRowHTML).join(''):'<tr><td colspan="5" style="padding:12px 14px;color:var(--ink-faint);font-size:13px">Sin ítems todavía. Agregá abajo.</td></tr>';
       var table='<div class="tbl-scroll"><table><thead><tr><th class="l">Ítem</th><th>Cant.</th><th>P. unitario</th><th>Subtotal</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
       var chips=CATALOG.map(function(c,ci){return '<button class="chip" data-add="'+ci+'">+ '+esc(c.nombre)+'</button>';}).join('')+'<button class="chip blank" data-add="blank">+ Ítem en blanco</button>';
@@ -864,6 +864,8 @@
 
   function numDisp(n){ return fmt2.format(n||0); }
   function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+  function plUnidad(cant,u){ u=(u||"").trim(); if(!u) return ""; if(Math.abs(cant)===1) return u; var map={boca:"bocas","módulo":"módulos",modulo:"módulos",metro:"metros",pieza:"piezas",caja:"cajas",unidad:"unidades",punto:"puntos",tramo:"tramos",llave:"llaves"}; var k=u.toLowerCase(); if(map[k]) return map[k]; if(u.length>2 && /[aeiou]$/i.test(u)) return u+"s"; return u; }
+  function consolidarItems(items){ var map={},order=[]; (items||[]).forEach(function(it){ var key=(it.nombre||"").trim().toLowerCase()+"||"+(it.unidad||"")+"||"+(it.precio||0); if(!map[key]){ map[key]={nombre:it.nombre,unidad:it.unidad,precio:it.precio,cant:0}; order.push(key);} map[key].cant+=(it.cant||0); }); return order.map(function(k){return map[k];}); }
 
   function recalc(){
     var base = state.items.reduce(function(a,it){return a+ (it.cant*it.precio);},0);
@@ -930,13 +932,14 @@
     document.getElementById("ps-cliente").textContent = state.cliente || "—";
     var obra=document.getElementById("ps-obra"); obra.textContent=state.obra||""; obra.hidden=!state.obra;
     document.getElementById("ps-fecha").textContent = fl || "—";
-    document.getElementById("ps-items").textContent = state.items.length;
+    var cons=consolidarItems(state.items);
+    document.getElementById("ps-items").textContent = cons.length;
 
     var body=document.getElementById("ps-rows"); body.innerHTML="";
-    state.items.forEach(function(it){
+    cons.forEach(function(it){
       var tr=document.createElement("tr");
       tr.innerHTML='<td class="cpt">'+esc(it.nombre||"—")+'</td>'+
-        '<td class="c">'+esc(numDisp(it.cant)+" "+(it.unidad||""))+'</td>'+
+        '<td class="c">'+esc(numDisp(it.cant)+" "+plUnidad(it.cant,it.unidad))+'</td>'+
         '<td class="c">'+fmt.format((it.cant||0)*(it.precio||0))+'</td>';
       body.appendChild(tr);
     });
