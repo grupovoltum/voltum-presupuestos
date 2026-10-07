@@ -379,10 +379,13 @@
   .ps-foot-c{color:#9aa099}
   .ps-foot-r{color:#05d398;font-weight:600}
 
+  #printSheet2{display:none;color:#14201c;font-family:var(--sans);background:#fff}
   @media print{
     .topbar,.wrap{display:none!important}
     #printSheet{display:flex!important;flex-direction:column;min-height:100vh}
     .ps-body{flex:1}
+    body.pm-alt #printSheet{display:none!important}
+    body.pm-alt #printSheet2{display:flex!important;flex-direction:column;min-height:100vh}
     body{background:#fff;margin:0}
     @page{margin:0}
   }
@@ -491,6 +494,7 @@
       <div class="section-h">
         <h2>Materiales de obra</h2>
         <span class="hint">Cajas y conectores, según las cantidades del presupuesto.</span>
+        <button class="btn" id="btnPdfMat" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Descargar PDF</button>
       </div>
 
       <div class="table-card">
@@ -586,6 +590,7 @@
     <div class="section-h">
       <h2>Armado del tablero</h2>
       <span class="hint">Agregá térmicas y diferenciales; te decimos los módulos y qué tablero elegir.</span>
+      <button class="btn" id="btnPdfTab" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Descargar PDF</button>
     </div>
 
     <div class="tab-grid">
@@ -684,6 +689,8 @@
     <span class="ps-foot-r">Grupo Voltum</span>
   </footer>
 </div>
+
+<div id="printSheet2"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -1334,8 +1341,8 @@
     var preCli=Promise.resolve();
     if(!cliId){ cliId=cajaUID(); preCli=db.collection("clientes").doc(cliId).set({id:cliId,nombre:cliente,cuit:"",tel:"",email:"",notas:"Creado desde Presupuesto"}); }
     var obraId=cajaUID();
-    var _mats=computeMaterials();
-    var matList=MAT_DEFS.map(function(m){return {nombre:m.nombre,unidad:m.unidad,cant:_mats[m.id]||0};}).filter(function(x){return x.cant>0;});
+    var matList=materialesData();
+    var tableroInfo=tableroData();
     var AMB_MAP={toma:"Tomacorrientes",luz:"Puntos de luz",sd105:"Señales débiles",sd55:"Señales débiles",luz_losa:"Iluminación en losa",luz_pared:"Aplique en pared",llave:"Puntos de luz",luz_cielo:"Puntos de luz"};
     var _tiposSet={};
     var _names=(Array.isArray(state.ambientes)?state.ambientes:[]).slice();
@@ -1345,7 +1352,7 @@
     preCli.then(function(){
       return db.collection("obras").doc(obraId).set({id:obraId,nombre:obra,clienteId:cliId,valor:total,inicio:hoyISO(),estado:"pendiente",notas:"Creada desde Presupuesto"+(state.num?(" N° "+state.num):"")});
     }).then(function(){
-      return db.collection("obras_prod").doc(obraId).set({ambientes:_ambientes,tipos:_tiposArr,materiales:matList,presupuesto:{total:total,num:(state.num||""),fecha:hoyISO()}},{merge:true});
+      return db.collection("obras_prod").doc(obraId).set({ambientes:_ambientes,tipos:_tiposArr,materiales:matList,tablero:tableroInfo,presupuesto:{total:total,num:(state.num||""),fecha:hoyISO()}},{merge:true});
     }).then(function(){
       btn.textContent="✓ Obra creada (pendiente)";
       alert("Listo. La obra quedó creada como PENDIENTE DE CONFIRMAR, con sus materiales. La confirmás desde Obras en la Voltum Page.");
@@ -1355,8 +1362,61 @@
     });
   }
 
+  /* ---- datos de materiales y tablero (para PDF y para guardar en obra) ---- */
+  function materialesData(){
+    var tot=computeMaterials();
+    var list=MAT_DEFS.map(function(m){return {nombre:m.nombre,unidad:m.unidad,cant:Math.round((tot[m.id]||0)*100)/100};}).filter(function(x){return x.cant>0;});
+    (state.matObra||[]).forEach(function(x){ var c=Number(x.cant)||0; if(c>0 && (x.nombre||"").trim()) list.push({nombre:x.nombre.trim(),unidad:x.unidad||"u",cant:c}); });
+    return list;
+  }
+  function tableroData(){
+    var d=state.difs.length, t=0; state.difs.forEach(function(df){ t+=termCount(df); });
+    var total=MOD_BORNERAS+t*MOD_TERMICA+d*MOD_DIF;
+    var reco=null; for(var i=0;i<TABLEROS.length;i++){ if(TABLEROS[i].mod>=total){ reco=TABLEROS[i]; break; } }
+    var items=[];
+    items.push({nombre:(reco?reco.nombre:("Tablero > "+TABLEROS[TABLEROS.length-1].mod+" mód")),cant:1,unidad:"u"});
+    var termAgg={},difAgg={};
+    state.difs.forEach(function(df){ difAgg[df.amp]=(difAgg[df.amp]||0)+1; df.terms.forEach(function(tm){ termAgg[tm.amp]=(termAgg[tm.amp]||0)+1; }); });
+    DIF_AMP.forEach(function(a){ if(difAgg[a.k]>0) items.push({nombre:"Diferencial "+ampLabelKey(a.k,"dif"),cant:difAgg[a.k],unidad:"u"}); });
+    TERM_AMP.forEach(function(a){ if(termAgg[a.k]>0) items.push({nombre:"Térmica "+ampLabelKey(a.k,"term"),cant:termAgg[a.k],unidad:"u"}); });
+    items.push({nombre:"Borneras",cant:MOD_BORNERAS,unidad:"mód"});
+    (state.matCab||[]).forEach(function(x){ var c=Number(x.cant)||0; if(c>0 && (x.nombre||"").trim()) items.push({nombre:x.nombre.trim(),unidad:x.unidad||"u",cant:c}); });
+    var circuitos=state.difs.map(function(df){ return { dif:ampLabelKey(df.amp,"dif"), terms: df.terms.map(function(tm){ return {nombre:(tm.nombre&&tm.nombre.trim())?tm.nombre.trim():"Térmica", amp:ampLabelKey(tm.amp,"term")}; }) }; });
+    return { resumen:{termicas:t,diferenciales:d,modulos:total,recomendado:(reco?reco.nombre:("> "+TABLEROS[TABLEROS.length-1].mod+" mód")),libres:(reco?(reco.mod-total):0)}, items:items, circuitos:circuitos };
+  }
+
+  /* ---- PDF de materiales y de tablero (reutiliza el motor de impresión) ---- */
+  function psLogoSrc(){ var i=document.querySelector("#printSheet .ps-logo"); return i?i.getAttribute("src"):""; }
+  function psSheet(titulo, bodyInner){
+    var cli=esc(state.cliente||"—"), fl=fechaLarga(state.fecha)||"—";
+    var obra=state.obra?('<span class="ps-csub">'+esc(state.obra)+'</span>'):"";
+    return '<header class="ps-head"><img class="ps-logo" alt="Voltum" src="'+psLogoSrc()+'"><div class="ps-brand"><span class="ps-name">VOLTUM</span><span class="ps-tag">Instalaciones eléctricas</span></div></header>'+
+      '<div class="ps-band"><span>'+esc(titulo)+'</span><span class="ps-band-dot">·</span><span>'+esc(fl)+'</span></div>'+
+      '<div class="ps-body"><div class="ps-cards">'+
+        '<div class="ps-card"><span class="ps-clabel">Cliente</span><span class="ps-cval">'+cli+'</span>'+obra+'</div>'+
+        '<div class="ps-card"><span class="ps-clabel">Fecha</span><span class="ps-cval">'+esc(fl)+'</span></div>'+
+        '<div class="ps-card"><span class="ps-clabel">Presupuesto</span><span class="ps-cval">'+(state.num?("N° "+esc(state.num)):"—")+'</span></div>'+
+      '</div>'+bodyInner+'</div>'+
+      '<footer class="ps-foot"><span class="ps-foot-l">VOLTUM</span><span class="ps-foot-c">Instalaciones eléctricas</span><span class="ps-foot-r">Grupo Voltum</span></footer>';
+  }
+  function matTable(list){
+    if(!list || !list.length) return '<p style="color:#5c625d;font-size:13.5px">No hay materiales cargados.</p>';
+    return '<table class="ps-table"><thead><tr><th class="l">Material</th><th>Cantidad</th><th>Unidad</th></tr></thead><tbody>'+
+      list.map(function(m){return '<tr><td class="cpt">'+esc(m.nombre)+'</td><td class="c">'+fmt2.format(m.cant)+'</td><td class="c">'+esc(plUnidad(m.cant,m.unidad))+'</td></tr>';}).join('')+'</tbody></table>';
+  }
+  function printAlt(html){ var el=document.getElementById("printSheet2"); if(!el) return; el.innerHTML=html; document.body.classList.add("pm-alt"); setTimeout(function(){ window.print(); },60); }
+  window.addEventListener("afterprint", function(){ document.body.classList.remove("pm-alt"); });
+  function printMateriales(){ printAlt(psSheet("Listado de materiales", matTable(materialesData()))); }
+  function printTablero(){
+    var td=tableroData();
+    var resumen='<div style="margin-bottom:14px;font-size:13.5px;color:#14201c"><b>'+esc(td.resumen.recomendado)+'</b> · '+td.resumen.modulos+' módulos · '+td.resumen.libres+' libres · '+td.resumen.termicas+' térmica'+(td.resumen.termicas===1?"":"s")+' · '+td.resumen.diferenciales+' diferencial'+(td.resumen.diferenciales===1?"":"es")+'</div>';
+    var circ=td.circuitos.length?('<h3 style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#8a908a;margin:20px 0 8px">Circuitos</h3>'+td.circuitos.map(function(c){return '<div style="margin-bottom:9px;font-size:13px;color:#14201c"><b>Diferencial '+esc(c.dif)+'</b>'+(c.terms.length?('<br>'+c.terms.map(function(t){return '&nbsp;&nbsp;• '+esc(t.nombre)+' — '+esc(t.amp);}).join('<br>')):' <span style="color:#8a908a">(sin térmicas)</span>')+'</div>';}).join('')):"";
+    printAlt(psSheet("Tablero eléctrico", resumen+matTable(td.items)+circ));
+  }
+
   /* ---- init ---- */
   load(); bindHead(); renderPresets(); renderRows(); bindAmbUI(); recalc(); bindTablero(); renderTablero(); bindExtras(); initCaja();
+  (function(){ var bm=document.getElementById("btnPdfMat"); if(bm) bm.addEventListener("click",printMateriales); var bt=document.getElementById("btnPdfTab"); if(bt) bt.addEventListener("click",printTablero); })();
   try{ var savedTab=localStorage.getItem("presup_tab"); if(savedTab) setTab(savedTab); }catch(e){}
   try{ var savedSub=localStorage.getItem("presup_sub"); if(savedSub) setSub(savedSub); }catch(e){}
 })();
