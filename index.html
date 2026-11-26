@@ -346,8 +346,8 @@
   .ps-band{background:#05d398;color:#08251c;font-weight:700;font-size:12.5px;letter-spacing:.04em;
     padding:9px 32px;display:flex;gap:10px;text-transform:uppercase}
   .ps-band-dot{opacity:.55}
-  .ps-body{padding:26px 32px 0}
-  .ps-cards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px}
+  .ps-body{padding:22px 32px 0}
+  .ps-cards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:18px}
   .ps-card{background:#f3f4f2;border:1px solid #e6e8e4;border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:3px}
   .ps-clabel{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#8a908a;font-weight:700}
   .ps-cval{font-size:16px;font-weight:700;color:#14201c}
@@ -356,10 +356,10 @@
   .ps-table thead th{background:#101210;color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:.04em;
     font-weight:700;text-align:right;padding:10px 14px}
   .ps-table thead th.l{text-align:left}
-  .ps-table tbody td{padding:11px 14px;border-bottom:1px solid #ececec;font-size:13.5px}
+  .ps-table tbody td{padding:8px 14px;border-bottom:1px solid #ececec;font-size:13.5px;line-height:1.35}
   .ps-table td.cpt{text-align:left;font-weight:500}
-  .ps-table td.c{text-align:right;font-variant-numeric:tabular-nums}
-  .ps-tot-wrap{display:flex;flex-direction:column;align-items:flex-end;margin-bottom:26px}
+  .ps-table td.c{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .ps-tot-wrap{display:flex;flex-direction:column;align-items:flex-end;margin-bottom:18px}
   .ps-tot-lines{width:54%;min-width:280px}
   .ps-tot-line{display:flex;justify-content:space-between;padding:7px 14px;font-size:13px;color:#5c625d}
   .ps-tot-line .v{font-weight:600;color:#14201c;font-variant-numeric:tabular-nums}
@@ -370,9 +370,16 @@
   .ps-notes{background:#f3f4f2;border:1px solid #e6e8e4;border-radius:8px;padding:14px 16px}
   .ps-notes-h{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#8a908a;font-weight:700}
   .ps-notes p{margin:6px 0 0;font-size:12.5px;color:#4c524d;line-height:1.5;white-space:pre-wrap}
-  .ps-sign{display:flex;flex-direction:column;align-items:flex-end;gap:6px;margin:34px 0 24px}
-  .ps-sign-line{width:220px;border-top:1px solid #9aa099}
-  .ps-sign-lbl{font-size:11px;color:#8a908a}
+  .ps-notes .ps-nh{margin:12px 0 2px;font-size:11px;font-weight:700;letter-spacing:.06em;color:#14201c;text-transform:uppercase}
+  .ps-notes .ps-nh:first-of-type{margin-top:8px}
+  .ps-notes .ps-nb{margin:5px 0 0;padding-left:12px;text-indent:-12px;font-size:12.5px;color:#4c524d;line-height:1.5}
+  .ps-notes .ps-nb b,.ps-notes .ps-nt b{color:#14201c;font-weight:600}
+  .ps-notes .ps-nt{margin:5px 0 0;font-size:12.5px;color:#4c524d;line-height:1.5}
+  .ps-close{display:flex;flex-direction:column;align-items:flex-end;gap:1px;margin:18px 0 12px;text-align:right}
+  .ps-close-a{font-size:12.5px;color:#4c524d}
+  .ps-close-n{font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:.04em;color:#14201c;margin-top:4px}
+  .ps-close-t{font-size:11px;color:#8a908a}
+  .ps-pg{color:#9aa099;margin-left:8px}
   .ps-foot{display:flex;justify-content:space-between;align-items:center;background:#101210;color:#fff;
     padding:14px 32px;font-size:11px;letter-spacing:.02em;margin-top:20px}
   .ps-foot-l{font-family:var(--display);font-weight:700;letter-spacing:.06em}
@@ -382,8 +389,12 @@
   #printSheet2{display:none;color:#14201c;font-family:var(--sans);background:#fff}
   @media print{
     .topbar,.wrap{display:none!important}
-    #printSheet{display:flex!important;flex-direction:column;min-height:100vh}
+    #printSheet{display:block!important}
+    .ps-page{display:flex;flex-direction:column;min-height:100vh;break-after:page;page-break-after:always}
+    .ps-page:last-child,.ps-page.ps-last{break-after:auto;page-break-after:auto}
+    .ps-page[hidden]{display:none!important}
     .ps-body{flex:1}
+    .ps-foot{margin-top:0}
     body.pm-alt #printSheet{display:none!important}
     body.pm-alt #printSheet2{display:flex!important;flex-direction:column;min-height:100vh}
     body{background:#fff;margin:0}
@@ -651,6 +662,7 @@
 </div>
 
 <div id="printSheet">
+<div class="ps-page" id="psP1">
   <header class="ps-head">
     <img class="ps-logo" alt="Voltum" src="data:image/png;base64,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">
     <div class="ps-brand"><span class="ps-name">VOLTUM</span><span class="ps-tag">Instalaciones eléctricas</span></div>
@@ -675,19 +687,38 @@
       <div class="ps-total"><span>TOTAL</span><span id="ps-total">$ 0</span></div>
     </div>
 
-    <div class="ps-notes" id="ps-notes-wrap">
-      <span class="ps-notes-h">Notas / condiciones</span>
-      <p id="ps-notes"></p>
+    <div id="ps-tail">
+      <div class="ps-notes" id="ps-notes-wrap">
+        <span class="ps-notes-h">Notas / condiciones</span>
+        <div id="ps-notes"></div>
+      </div>
+      <div class="ps-close">
+        <span class="ps-close-a">Atentamente,</span>
+        <span class="ps-close-n">GRUPO VOLTUM</span>
+        <span class="ps-close-t">Instalaciones eléctricas</span>
+      </div>
     </div>
-
-    <div class="ps-sign"><span class="ps-sign-line"></span><span class="ps-sign-lbl">Firma y aclaración</span></div>
   </div>
 
   <footer class="ps-foot">
     <span class="ps-foot-l">VOLTUM</span>
     <span class="ps-foot-c" id="ps-foot-c">Instalaciones eléctricas</span>
-    <span class="ps-foot-r">Grupo Voltum</span>
+    <span class="ps-foot-r">Grupo Voltum<span class="ps-pg" id="ps-pg1"></span></span>
   </footer>
+</div>
+<div class="ps-page" id="psP2" hidden>
+  <header class="ps-head">
+    <img class="ps-logo" alt="Voltum" id="ps-logo2" src="">
+    <div class="ps-brand"><span class="ps-name">VOLTUM</span><span class="ps-tag">Instalaciones eléctricas</span></div>
+  </header>
+  <div class="ps-band"><span id="ps-band2">PRESUPUESTO</span><span class="ps-band-dot">·</span><span>Notas y condiciones</span></div>
+  <div class="ps-body" id="ps-body2"></div>
+  <footer class="ps-foot">
+    <span class="ps-foot-l">VOLTUM</span>
+    <span class="ps-foot-c" id="ps-foot-c2">Instalaciones eléctricas</span>
+    <span class="ps-foot-r">Grupo Voltum<span class="ps-pg" id="ps-pg2"></span></span>
+  </footer>
+</div>
 </div>
 
 <div id="printSheet2"></div>
@@ -962,9 +993,46 @@
     if(state.iva){ line("Subtotal", base); line("IVA 21%", iva); }
     document.getElementById("ps-total").textContent = fmt.format(total);
 
-    document.getElementById("ps-notes").textContent = state.notas||"";
+    document.getElementById("ps-notes").innerHTML = notasHTML(state.notas||"");
     document.getElementById("ps-notes-wrap").hidden = !(state.notas&&state.notas.trim());
-    document.getElementById("ps-foot-c").textContent = "Instalaciones eléctricas"+(state.num?(" · Presupuesto N° "+state.num):"");
+    var footC = "Instalaciones eléctricas"+(state.num?(" · Presupuesto N° "+state.num):"");
+    document.getElementById("ps-foot-c").textContent = footC;
+    document.getElementById("ps-foot-c2").textContent = footC;
+    document.getElementById("ps-band2").textContent = state.num ? ("Presupuesto N° "+state.num) : "Presupuesto";
+    paginarPrint();
+  }
+
+  /* Notas: líneas en MAYÚSCULAS = título; "• Título: texto" = viñeta con título en negrita */
+  function notasHTML(txt){
+    return String(txt).split(/\r?\n/).map(function(raw){
+      var l=raw.trim(); if(!l) return "";
+      var letras=l.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/g,"");
+      if(letras.length>3 && l===l.toUpperCase() && !/^[•\-]/.test(l)) return '<div class="ps-nh">'+esc(l)+'</div>';
+      var bul=/^[•\-]\s*/.test(l); if(bul) l=l.replace(/^[•\-]\s*/,"");
+      var m=l.match(/^([^:]{2,70}):\s*(.*)$/), inner=m?('<b>'+esc(m[1])+':</b> '+esc(m[2])):esc(l);
+      return bul?('<div class="ps-nb">• '+inner+'</div>'):('<div class="ps-nt">'+inner+'</div>');
+    }).join("");
+  }
+
+  /* Si notas + cierre no entran en la hoja 1, pasan completos a una hoja 2 con su encabezado y pie */
+  function paginarPrint(){
+    var ps=document.getElementById("printSheet"), p1=document.getElementById("psP1"), p2=document.getElementById("psP2");
+    var tail=document.getElementById("ps-tail"), body1=p1.querySelector(".ps-body");
+    body1.appendChild(tail); p2.hidden=true; p1.classList.add("ps-last");
+    var prev=ps.getAttribute("style");
+    ps.setAttribute("style","display:block;position:absolute;left:-10000px;top:0;width:210mm;visibility:hidden");
+    var probe=document.createElement("div"); probe.style.height="297mm"; ps.appendChild(probe);
+    var pageH=probe.offsetHeight; ps.removeChild(probe);
+    var foot1=p1.querySelector(".ps-foot"), footMt=parseFloat(getComputedStyle(foot1).marginTop)||0; /* en impresión el pie no lleva margen */
+    var needs2 = (p1.offsetHeight - footMt) > pageH - 30; /* 30px de margen de seguridad */
+    if(needs2){
+      document.getElementById("ps-body2").appendChild(tail);
+      document.getElementById("ps-logo2").src = psLogoSrc();
+      p2.hidden=false; p1.classList.remove("ps-last");
+    }
+    document.getElementById("ps-pg1").textContent = needs2 ? "· Pág. 1/2" : "";
+    document.getElementById("ps-pg2").textContent = needs2 ? "· Pág. 2/2" : "";
+    if(prev===null) ps.removeAttribute("style"); else ps.setAttribute("style",prev);
   }
 
   /* ---- presets ---- */
