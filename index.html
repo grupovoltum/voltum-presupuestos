@@ -1062,7 +1062,7 @@
   /* ---- toolbar ---- */
   document.getElementById("btnPrint").addEventListener("click", function(){ renderPrint(); window.print(); });
   document.getElementById("btnReset").addEventListener("click", function(){
-    if(!confirm("¿Reiniciar el presupuesto a los ítems de ejemplo? Se perderán los cambios guardados.")) return;
+    if(!confirm("¿Empezar un presupuesto nuevo? Se borrará el presupuesto actual.")) return;
     try{ localStorage.removeItem(KEY); }catch(e){}
     state={ cliente:"",obra:"",num:"",fecha:"",manoObra:0,iva:false,
       notas:"Los valores no incluyen materiales ni trabajos no detallados en este presupuesto. Presupuesto válido por 15 días.",
@@ -1070,7 +1070,7 @@
       difs:[ {id:uid(),amp:"a40",terms:[{id:uid(),nombre:"Iluminación",amp:"a16"},{id:uid(),nombre:"Tomas generales",amp:"a20"}]},
              {id:uid(),amp:"a25",terms:[{id:uid(),nombre:"Tomas cocina",amp:"a25"}]} ],
       matObra:[], matCab:[],
-      items: CATALOG.map(function(c){return {id:uid(),tipo:c.tipo,nombre:c.nombre,unidad:c.unidad,cant:c.cant,precio:c.precio};})};
+      items: [], ambientes: []};  /* presupuesto nuevo vacío: sin ítems ocultos que sumen al total */
     bindHead(); renderRows(); recalc(); bindTablero(); renderTablero();
     renderExtra("matObra","obraExtraRows"); renderExtra("matCab","cabExtraRows");
     if(typeof resetBtnCaja==="function") resetBtnCaja();
