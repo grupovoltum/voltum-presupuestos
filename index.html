@@ -731,16 +731,19 @@
   "use strict";
 
   var CATALOG = [
-    {tipo:"toma", nombre:"Boca Tomacorrientes", unidad:"boca", cant:10, precio:43500},
-    {tipo:"toma", nombre:"Boca Tomacorrientes especiales", unidad:"boca", cant:1, precio:43500},
-    {tipo:"luz", nombre:"Boca Iluminación (sin artefactos)", unidad:"boca", cant:8, precio:43500},
-    {tipo:"luz", nombre:"Boca Punto de luz", unidad:"boca", cant:1, precio:43500}, 
-    {tipo:"sd105", nombre:"Boca Señales débiles 10x5", unidad:"boca", cant:2, precio:43500},
-    {tipo:"sd55", nombre:"Boca Señales débiles 5x5", unidad:"boca", cant:2, precio:43500},
-    {tipo:"artefactos", nombre:"Colocación de artefactos", unidad:"artefacto", cant:1, precio:15000},
-    {tipo:"armado_tab", nombre:"Armado de tablero eléctrico", unidad:"u", cant:1, precio:230000},
-    {tipo:"jabalina", nombre:"Cavado y conexión de jabalina PAT", unidad:"u", cant:1, precio:80000},
-    {tipo:"acometida", nombre:"Cavado y conexión de acometida < 15m", unidad:"u", cant:1, precio:110000}
+    {tipo:"acometida", nombre:"Cavado, cableado y conexión de acometida + 20 metros (pilar-TG)", unidad:"u", cant:1, precio:400000},
+    {tipo:"armado_tab", nombre:"Armado completo de tablero eléctrico general", unidad:"u", cant:1, precio:600000},
+    {tipo:"armado_tab", nombre:"Armado completo de tablero eléctrico seccional (incluye canalización y conexión a tablero general)", unidad:"u", cant:1, precio:400000},
+    {tipo:"jabalina", nombre:"Cavado, conexión y medición de jabalina PAT", unidad:"u", cant:1, precio:160000},
+    {tipo:"toma", nombre:"Boca Tomacorrientes de uso general", unidad:"boca", cant:1, precio:50000},
+    {tipo:"toma", nombre:"Boca Tomacorrientes de uso especial", unidad:"boca", cant:1, precio:52000},
+    {tipo:"toma", nombre:"Boca Alimentación carga única", unidad:"boca", cant:1, precio:52000},
+    {tipo:"luz", nombre:"Boca Iluminación de uso general / exterior (sin colocación de artefactos, incluye armado boca de encendido)", unidad:"boca", cant:1, precio:50000},
+    {tipo:"luz", nombre:"Boca Iluminación de uso especial (sin colocación de artefactos, incluye armado boca de encendido)", unidad:"boca", cant:1, precio:60000},
+    {tipo:"sd105", nombre:"Boca Señales débiles 10x5 (cajas de paso y cajas de salida)", unidad:"boca", cant:1, precio:50000},
+    {tipo:"artefactos", nombre:"Colocación de artefactos pequeños y medianos / simples", unidad:"artefacto", cant:1, precio:17000},
+    {tipo:"artefactos", nombre:"Colocación de artefactos grandes / complejos", unidad:"artefacto", cant:1, precio:35000},
+    {tipo:"pileta", nombre:"Tendido subterráneo y tablero estanco 12V pileta (hasta 15m desde TS-Q)", unidad:"u", cant:1, precio:310000}
   ];
 
   // Materiales que consume cada tipo, por unidad: [idMaterial, cantidad]
